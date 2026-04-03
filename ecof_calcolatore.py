@@ -93,7 +93,7 @@ def calcola_movimento(materiale, q_kg, d_ecof_km, d_impianto_km, n_giro, carico_
 
     P1 = Q * (T_tratt + T_ric - T_smalt - T_verg)
     P2 = (D_cliente * CO2perKm(0)) / N_giro
-    P3 = (CO2perKm(C) - CO2perKm(0)) * D_impianto * Conf
+    P3 = (CO2perKm(0) / N_giro) * D_impianto + (CO2perKm(C) - CO2perKm(0)) * D_impianto * Conf
 
     gha_netti = -gha_impronta + bc_liberata
     Convenzione: positivo = biocapacita, negativo = impronta ecologica
@@ -168,7 +168,7 @@ def sezione_veicoli():
             lambda x: x if x is not None else "— (da rilevare)"
         )
         df_v.columns = ["Modello", "CO2/km vuoto", "CO2/km pieno", "C_max (kg)"]
-        st.dataframe(df_v, hide_index=True, use_container_width=True)
+        st.dataframe(df_v, hide_index=True, width='stretch')
     else:
         st.info("Nessun veicolo inserito.")
 
@@ -276,9 +276,9 @@ def pagina_calcolatore():
             "T_smalt": f["t_smalt"], "T_tratt": f["t_tratt"],
             "T_ric":   f["t_ric"],   "Tipo":    f["tipo"],
         }])
-        st.dataframe(df_f, hide_index=True, use_container_width=True)
+        st.dataframe(df_f, hide_index=True, width='stretch')
 
-        calcola = st.button("Calcola", type="primary", use_container_width=True)
+        calcola = st.button("Calcola", type="primary", width='stretch')
 
     with col_out:
         st.markdown("### Risultati")
@@ -300,7 +300,7 @@ def pagina_calcolatore():
         m1, m2, m3 = st.columns(3)
         m1.metric("CO2 netta totale",  f"{r['co2_netta']:+.2f} kg")
         m2.metric("Impronta in gha",   f"{r['gha_impronta']:.5f}")
-        m3.metric("BC liberata (gha)", f"{r['bc_liberata']:.5f}")
+        m3.metric("Biocapacità liberata (gha)", f"{r['bc_liberata']:.5f}")
 
         st.divider()
 
@@ -357,7 +357,7 @@ def pagina_calcolatore():
             ),
             font=dict(color="#CCCCCC"),
         )
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width='stretch')
 
         st.divider()
 
@@ -427,7 +427,7 @@ def pagina_tabelle():
                 "Resa (t/ha)": f["resa"] if f["resa"] else "—",
                 "F_equiv":     f["f_equiv"] if f["f_equiv"] else "—",
             })
-        st.dataframe(pd.DataFrame(rows), hide_index=True, use_container_width=True)
+        st.dataframe(pd.DataFrame(rows), hide_index=True, width='stretch')
 
     with tab2:
         st.caption("Veicoli inseriti nella sessione corrente.")
@@ -437,7 +437,7 @@ def pagina_tabelle():
                 lambda x: x if x is not None else "— (da rilevare)"
             )
             df_v.columns = ["Modello", "CO2/km vuoto", "CO2/km pieno", "C_max (kg)"]
-            st.dataframe(df_v, hide_index=True, use_container_width=True)
+            st.dataframe(df_v, hide_index=True, width='stretch')
         else:
             st.info("Nessun veicolo inserito.")
 
