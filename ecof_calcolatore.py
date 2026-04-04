@@ -129,7 +129,11 @@ def calcola_movimento(materiale, q_kg, d_ecof_km, d_impianto_km, n_giro, carico_
     co2pkm_car   = co2_per_km(carico_totale_kg, veicolo)
     t_verg = f["t_verg"] if f["t_verg"] is not None else 0.0
 
-    p1 = q_kg * (f["t_tratt"] + f["t_ric"] - f["t_smalt"] - t_verg)
+    no_recycling = f["t_ric"] == 0 and f["t_verg"] is None
+    if no_recycling:
+        p1 = q_kg * (f["t_tratt"] + f["t_smalt"])
+    else:
+        p1 = q_kg * (f["t_tratt"] + f["t_ric"] - f["t_smalt"] - t_verg)
     p2 = (d_ecof_km * co2pkm_vuoto) / n_giro
     p3 = (d_impianto_km * co2pkm_vuoto) / n_giro + (co2pkm_car - co2pkm_vuoto) * d_impianto_km * conf
 
@@ -150,6 +154,7 @@ def calcola_movimento(materiale, q_kg, d_ecof_km, d_impianto_km, n_giro, carico_
         "co2pkm_vuoto": co2pkm_vuoto,
         "co2pkm_carico": co2pkm_car,
         "conf": conf,
+        "no_recycling": no_recycling,
     }
 
 
@@ -624,13 +629,13 @@ def pagina_calcolatore():
         st.divider()
 
         st.markdown("**Scomposizione CO2 per componente**")
-        st.caption("P1 = bilancio riciclo  |  P2 = tragitto Ecof->cliente  |  P3 = peso su cliente->impianto")
+        st.caption("P1 — Bilancio emissivo del riciclo rispetto a smaltimento e produzione vergine  |  P2 — Emissioni del tragitto Ecof → cliente, ripartite per numero di clienti nel giro  |  P3 — Emissioni del tragitto cliente → impianto, quota fissa ripartita per giro più quota variabile proporzionale al peso conferito")
 
         # Ordine P1 → P2 → P3 dall'alto verso il basso (Plotly orizzontale è bottom-up, quindi invertiamo)
-        componenti = ["P3 — Peso cliente->impianto", "P2 — Tragitto Ecof->cliente", "P1 — Bilancio riciclo"]
+        componenti = ["P3", "P2", "P1"]
         valori     = [r["co2_p3"], r["co2_p2"], r["co2_p1"]]
         colori     = ["#52FFB8" if v <= 0 else "#FF4B4B" for v in valori]
-        etichette  = [f"{v:+.3f} kg" for v in valori]
+        etichette  = [f"P3: {r['co2_p3']:+.3f} kg", f"P2: {r['co2_p2']:+.3f} kg", f"P1: {r['co2_p1']:+.3f} kg"]
 
         fig = go.Figure(go.Bar(
             x=valori,
@@ -678,6 +683,86 @@ def pagina_calcolatore():
         )
         st.plotly_chart(fig, width='stretch')
 
+        if veicolo["co2pkm_pieno"] is not None:
+            import numpy as np
+            b_curve = (veicolo["co2pkm_pieno"] - veicolo["co2pkm_vuoto"]) / math.log(1 + veicolo["c_max"])
+            xs = np.linspace(0, veicolo["c_max"], 300)
+            ys = veicolo["co2pkm_vuoto"] + b_curve * np.log(1 + xs)
+
+            y_vuoto  = veicolo["co2pkm_vuoto"]
+            y_pieno  = veicolo["co2pkm_pieno"]
+            y_giro   = r["co2pkm_carico"]
+            x_giro   = carico
+
+            fig_curve = go.Figure()
+
+            fig_curve.add_trace(go.Scatter(
+                x=xs, y=ys,
+                mode="lines",
+                line=dict(color="#52FFB8", width=2),
+                showlegend=False,
+            ))
+
+            fig_curve.add_trace(go.Scatter(
+                x=[0, veicolo["c_max"]],
+                y=[y_vuoto, y_pieno],
+                mode="markers+text",
+                marker=dict(color="white", size=8),
+                text=["Vuoto", "Pieno"],
+                textposition=["top right", "top left"],
+                textfont=dict(color="white", size=11),
+                showlegend=False,
+            ))
+
+            fig_curve.add_trace(go.Scatter(
+                x=[x_giro],
+                y=[y_giro],
+                mode="markers+text",
+                marker=dict(
+                    color="#FF4B4B", size=12,
+                    line=dict(color="#FF4B4B", width=2),
+                    symbol="circle",
+                ),
+                text=["Questo giro"],
+                textposition="top right",
+                textfont=dict(color="#FF4B4B", size=11),
+                showlegend=False,
+            ))
+
+            fig_curve.add_shape(
+                type="line",
+                x0=x_giro, x1=x_giro, y0=min(ys), y1=y_giro,
+                line=dict(color="#FF4B4B", width=1, dash="dash"),
+            )
+            fig_curve.add_shape(
+                type="line",
+                x0=0, x1=x_giro, y0=y_giro, y1=y_giro,
+                line=dict(color="#FF4B4B", width=1, dash="dash"),
+            )
+
+            fig_curve.update_layout(
+                plot_bgcolor="#0E1117",
+                paper_bgcolor="#0E1117",
+                height=250,
+                margin=dict(l=0, r=20, t=10, b=30),
+                xaxis=dict(
+                    title="Carico (kg)",
+                    title_font=dict(color="#AAAAAA"),
+                    tickfont=dict(color="#AAAAAA"),
+                    showgrid=False,
+                    zeroline=False,
+                ),
+                yaxis=dict(
+                    title="CO₂/km (kg/km)",
+                    title_font=dict(color="#AAAAAA"),
+                    tickfont=dict(color="#AAAAAA"),
+                    showgrid=False,
+                    zeroline=False,
+                ),
+                showlegend=False,
+            )
+            st.plotly_chart(fig_curve, width='stretch')
+
         st.divider()
 
         with st.expander("Dettaglio calcolo passo per passo"):
@@ -703,7 +788,26 @@ def pagina_calcolatore():
 | Conf = Q / C | {r['conf']:.4f} |
 | CO2perKm(0) vuoto | {r['co2pkm_vuoto']:.5f} kg/km |
 | CO2perKm(C) carico | {r['co2pkm_carico']:.5f} kg/km |
+""")
 
+            if r["no_recycling"]:
+                st.markdown(f"""
+*(Materiale senza percorso di riciclo — il calcolo usa solo il costo di trattamento e smaltimento)*
+
+**P1** = {q_kg} x ({f['t_tratt']} + {f['t_smalt']}) = **{r['co2_p1']:+.3f} kg CO2**
+
+**P2** = ({d_ecof} x {r['co2pkm_vuoto']:.5f}) / {n_giro} = **{r['co2_p2']:+.3f} kg CO2**
+
+**P3** = ({d_imp} x {r['co2pkm_vuoto']:.5f}) / {n_giro} + ({r['co2pkm_carico']:.5f} - {r['co2pkm_vuoto']:.5f}) x {d_imp} x {r['conf']:.4f} = **{r['co2_p3']:+.3f} kg CO2**
+
+**CO2 netta** = P1 + P2 + P3 = **{r['co2_netta']:+.3f} kg CO2**
+
+**Impronta ecologica** = ({r['co2_netta']:.3f} / 1000) / {CO2_PER_GHA} = **{r['gha_impronta']:.5f} gha**
+
+**Saldo netto** = **{r['gha_netti']:+.5f} gha**
+""")
+            else:
+                st.markdown(f"""
 **P1** = {q_kg} x ({f['t_tratt']} + {f['t_ric']} - {f['t_smalt']} - {t_verg_val}) = **{r['co2_p1']:+.3f} kg CO2**
 
 **P2** = ({d_ecof} x {r['co2pkm_vuoto']:.5f}) / {n_giro} = **{r['co2_p2']:+.3f} kg CO2**
@@ -714,16 +818,16 @@ def pagina_calcolatore():
 
 **Impronta in gha** = ({r['co2_netta']:.3f} / 1000) / {CO2_PER_GHA} = **{r['gha_impronta']:.5f} gha**
 """)
-            if f["tipo"] == "biologico" and f["resa"]:
-                bc_co2_str = f"\n**Biocapacità da CO₂ evitata** = |{r['gha_impronta']:.5f}| = **{abs(r['gha_impronta']):.5f} gha**\n" if r["co2_netta"] < 0 else "\n*(CO₂ netta positiva — nessuna biocapacità da CO₂ evitata)*\n"
-                st.markdown(f"""
+                if f["tipo"] == "biologico" and f["resa"]:
+                    bc_co2_str = f"\n**Biocapacità da CO₂ evitata** = |{r['gha_impronta']:.5f}| = **{abs(r['gha_impronta']):.5f} gha**\n" if r["co2_netta"] < 0 else "\n*(CO₂ netta positiva — nessuna biocapacità da CO₂ evitata)*\n"
+                    st.markdown(f"""
 **Biocapacità da terreno** = ({q_kg} / 1000) / {f['resa']} x {f['f_equiv']} = **{r['bc_liberata']:.5f} gha**
 {bc_co2_str}
 **Saldo netto** = -{r['gha_impronta']:.5f} + {r['bc_liberata']:.5f} = **{r['gha_netti']:+.5f} gha**
 """)
-            else:
-                bc_co2_str = f"\n**Biocapacità da CO₂ evitata** = |{r['gha_impronta']:.5f}| = **{abs(r['gha_impronta']):.5f} gha**\n" if r["co2_netta"] < 0 else "\n*(CO₂ netta positiva — nessuna biocapacità da CO₂ evitata)*\n"
-                st.markdown(f"""
+                else:
+                    bc_co2_str = f"\n**Biocapacità da CO₂ evitata** = |{r['gha_impronta']:.5f}| = **{abs(r['gha_impronta']):.5f} gha**\n" if r["co2_netta"] < 0 else "\n*(CO₂ netta positiva — nessuna biocapacità da CO₂ evitata)*\n"
+                    st.markdown(f"""
 *(Materiale abiotico — nessuna biocapacità da terreno)*
 {bc_co2_str}
 **Saldo netto** = -{r['gha_impronta']:.5f} = **{r['gha_netti']:+.5f} gha**
