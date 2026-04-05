@@ -3,7 +3,6 @@
 **Calcolatore Saldo Ambientale** — applicazione Streamlit che calcola
 l'impatto netto in CO₂ e biocapacità delle operazioni di raccolta
 e trasporto rifiuti.
-# Soluslab
 
 🌐 **Demo:** [soluslab.streamlit.app](https://soluslab.streamlit.app)
 
