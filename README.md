@@ -3,6 +3,9 @@
 **Calcolatore Saldo Ambientale** — applicazione Streamlit che calcola
 l'impatto netto in CO₂ e biocapacità delle operazioni di raccolta
 e trasporto rifiuti.
+# Soluslab
+
+🌐 **Demo:** [soluslab.streamlit.app](https://soluslab.streamlit.app)
 
 ## Cosa fa
 
@@ -26,9 +29,7 @@ GFN e i fattori di equivalenza per materiali biologici.
 
 - Calcolo CO₂ e ettari globali (gha) per singolo movimento
 - Gestione veicoli e materiali con persistenza JSON
-- Grafici Plotly tema scuro
-- Gestione speciale per rifiuti indifferenziati
-- Deployabile su Streamlit Community Cloud
+- Grafici Plotly 
 
 ## Stack
 
