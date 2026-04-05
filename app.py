@@ -563,9 +563,9 @@ def pagina_calcolatore():
         st.markdown("**Logistica**")
         c1, c2 = st.columns(2)
         with c1:
-            d_operator = st.number_input("D_cliente (km)", min_value=0.1, value=10.0, step=0.5,
+            d_operator = st.number_input("D_cliente (km)", min_value=0.1, value=30.0, step=0.5,
                                          help="Distanza operatore -> unita locale del cliente")
-            d_imp  = st.number_input("D_impianto (km)", min_value=0.1, value=15.0, step=0.5,
+            d_imp  = st.number_input("D_impianto (km)", min_value=0.1, value=50.0, step=0.5,
                                      help="Distanza unita locale -> impianto di riciclo")
         with c2:
             n_giro = st.number_input("N_giro", min_value=1, value=3, step=1,
