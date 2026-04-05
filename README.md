@@ -1,39 +1,54 @@
-Ecof Calcolatore — Saldo Ambientale
-Strumento interno di Ecof Italia per il calcolo del saldo ambientale associato ai movimenti di rifiuti gestiti per conto dei clienti.
+# Soluslab
 
-Cosa fa:
-Per ogni ritiro inserito, calcola la CO₂ netta prodotta e la converte in ettari globali (gha), distinguendo tra:
+**Environmental Balance Calculator** — a Streamlit web app that computes the
+net CO₂ footprint and biocapacity impact of waste collection and transport
+operations.
 
-Biocapacità liberata — quando il riciclo restituisce più risorse biologiche di quante ne consuma
-Impronta ecologica — quando il bilancio netto è negativo per l'ambiente
+## What it does
 
-Come funziona:
-Il calcolo si divide in tre componenti:
+For each waste movement, Soluslab calculates a three-part carbon balance:
 
-P1 — bilancio emissivo del riciclo rispetto alla produzione vergine e allo smaltimento
-P2 — emissioni del tragitto Ecof → cliente, ripartite equamente tra i clienti dello stesso giro
-P3 — emissioni del tragitto cliente → impianto, con quota fissa ripartita per giro e quota variabile proporzionale al peso conferito (Conf = Q / C)
+- **P1** — Emission savings from recycling vs. linear alternatives (landfill /
+  virgin production)
+- **P2** — Emissions from the return (empty) trip from operator to client
+- **P3** — Emissions from the client-to-plant leg, with fixed and variable
+  components
 
-Per i materiali biologici (carta, legno, organico) il saldo in gha include due contributi distinti:
+Vehicle emissions follow a **logarithmic curve** calibrated on empty/full load
+values, with a linear EEA fallback for uncalibrated vehicles.
 
-Biocapacità da CO₂ evitata — quando la CO₂ netta è negativa, convertita in gha tramite la capacità di assorbimento forestale del Global Footprint Network (1.197 tCO₂/gha/anno)
-Biocapacità da terreno — superficie forestale o agricola risparmiata grazie al mancato ricorso a materia prima vergine, calcolata usando i fattori di equivalenza GFN
+Biocapacity is derived from GFN forest absorption factors and equivalence
+factors for biological materials.
 
-Per i materiali abiotici (plastica, metalli, vetro, toner) viene calcolata solo la biocapacità da CO₂ evitata, quando applicabile.
-Curva emissioni veicoli
-Le emissioni al km in funzione del carico seguono un modello logaritmico calibrato su due punti (CO₂/km a vuoto e a pieno carico):
-CO₂perKm(C) = co2_vuoto + b × ln(1 + C)
-b = (co2_pieno - co2_vuoto) / ln(1 + C_max)
-Finché CO₂/km a pieno carico non è disponibile per un veicolo, viene usato un modello lineare EEA come fallback.
+## Features
 
-Stack:
+- Per-movement CO₂ and global hectares (gha) calculation
+- Vehicle and material management with JSON persistence
+- Dark-theme Plotly charts
+- Special handling for mixed/undifferentiated waste streams
+- Deployable on Streamlit Community Cloud
 
-Python 3
-Streamlit
-Pandas
-Plotly
+## Stack
 
-Avvio:
+- Python 3
+- Streamlit
+- Plotly
+- JSON (vehicles and materials configuration)
 
-pip install streamlit pandas plotly
-streamlit run ecof_calcolatore.py
+## Run locally
+
+```bash
+pip install -r requirements.txt
+streamlit run app.py
+```
+
+## Data files
+
+| File | Description |
+|---|---|
+| `veicoli.json` | Vehicle fleet with emission curve parameters |
+| `materiali.json` | Waste materials with emission factors and recycling rates |
+
+## License
+
+Private — internal use only.
