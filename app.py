@@ -75,10 +75,10 @@ FATTORI = {
 CO2_PER_GHA = 1.197
 
 # Default vehicles — will be overridden by session_state data
-# co2pkm_pieno = None means data not yet measured → linear fallback
+# co2/km pieno = None means data not yet measured → linear fallback
 VEICOLI_DEFAULT = [
-    {"modello": "Fiat Ducato 35 L3H2", "co2pkm_vuoto": 0.18, "co2pkm_pieno": 0.30, "c_max": 1200},
-    {"modello": "Iveco Daily 35S",      "co2pkm_vuoto": 0.21, "co2pkm_pieno": 0.37, "c_max": 1500},
+    {"modello": "Fiat Ducato 35 L3H2", "co2/km vuoto": 0.18, "co2/km pieno": 0.30, "C max": 1200},
+    {"modello": "Iveco Daily 35S",      "co2/km vuoto": 0.21, "co2/km pieno": 0.37, "C max": 1500},
 ]
 
 
@@ -100,16 +100,16 @@ def co2_per_km_log(carico, co2_vuoto, co2_pieno, c_max):
 def co2_per_km_lin(carico, co2_vuoto):
     """
     EEA linear fallback.
-    Removed once all models have a measured co2pkm_pieno.
+    Removed once all models have a measured co2/km pieno.
     """
     return co2_vuoto + carico * 0.00008
 
 
 def co2_per_km(carico, veicolo):
-    """Router: logarithmic if co2pkm_pieno is available, otherwise linear."""
-    if veicolo["co2pkm_pieno"] is not None:
-        return co2_per_km_log(carico, veicolo["co2pkm_vuoto"], veicolo["co2pkm_pieno"], veicolo["c_max"])
-    return co2_per_km_lin(carico, veicolo["co2pkm_vuoto"])
+    """Router: logarithmic if co2/km_pieno is available, otherwise linear."""
+    if veicolo["co2/km pieno"] is not None:
+        return co2_per_km_log(carico, veicolo["co2/km vuoto"], veicolo["co2/km pieno"], veicolo["C max"])
+    return co2_per_km_lin(carico, veicolo["co2/km vuoto"])
 
 
 def calcola_movimento(materiale, q_kg, d_itinerario_km, d_baricentro_impianto_km, n_itinerario, carico_totale_kg, veicolo):
@@ -161,9 +161,9 @@ def calcola_movimento(materiale, q_kg, d_itinerario_km, d_baricentro_impianto_km
         "gha_impronta": gha_imp,
         "bc_liberata": bc_lib,
         "gha_netti": -gha_imp + bc_lib,
-        "modello_curva": "logaritmico" if veicolo["co2pkm_pieno"] is not None else "lineare (fallback)",
-        "co2pkm_vuoto": co2pkm_vuoto,
-        "co2pkm_carico": co2pkm_car,
+        "modello_curva": "logaritmico" if veicolo["co2/km pieno"] is not None else "lineare (fallback)",
+        "co2/km vuoto": co2pkm_vuoto,
+        "co2/km carico": co2pkm_car,
         "conf": conf,
         "no_recycling": no_recycling,
     }
@@ -205,10 +205,10 @@ def sezione_veicoli():
 
     if st.session_state.veicoli:
         df_v = pd.DataFrame(st.session_state.veicoli)
-        df_v["co2pkm_pieno"] = df_v["co2pkm_pieno"].apply(
+        df_v["co2/km pieno"] = df_v["co2/km pieno"].apply(
             lambda x: x if x is not None else "— (da rilevare)"
         )
-        df_v.columns = ["Modello", "CO2/km vuoto", "CO2/km pieno", "C_max (kg)"]
+        df_v.columns = ["Modello", "CO2/km vuoto", "CO2/km pieno", "C max (kg)"]
         st.dataframe(df_v, hide_index=True, width='stretch')
     else:
         st.info("Nessun veicolo inserito.")
@@ -222,7 +222,7 @@ def sezione_veicoli():
     with c3:
         nuovo_pieno = st.number_input("CO2/km pieno (opz.)", min_value=0.01, value=0.24, step=0.01, format="%.2f", help="Emissioni CO₂ al km a pieno carico — usato per calibrare la curva logaritmica (kg/km)", key="input_pieno")
     with c4:
-        nuovo_cmax = st.number_input("C_max (kg)", min_value=100, value=1200, step=100, help="Portata massima del veicolo in kg — corrisponde a f(C_max) nella curva logaritmica", key="input_cmax")
+        nuovo_cmax = st.number_input("C max (kg)", min_value=100, value=1200, step=100, help="Portata massima del veicolo in kg — corrisponde a f(C max) nella curva logaritmica", key="input_cmax")
 
     if st.button("Aggiungi veicolo"):
         if not nuovo_modello.strip():
@@ -232,9 +232,9 @@ def sezione_veicoli():
 
             st.session_state.veicoli.append({
                 "modello": nuovo_modello.strip(),
-                "co2pkm_vuoto": nuovo_vuoto,
-                "co2pkm_pieno": pieno,
-                "c_max": nuovo_cmax,
+                "co2/km vuoto": nuovo_vuoto,
+                "co2/km pieno": pieno,
+                "C max": nuovo_cmax,
             })
             save_json("veicoli.json", st.session_state.veicoli)
             st.success(f"Veicolo '{nuovo_modello}' aggiunto.")
@@ -271,17 +271,17 @@ def sezione_veicoli():
             st.session_state.ultimo_veicolo_modifica = sel_mod
 
         v_mod = next(v for v in st.session_state.veicoli if v["modello"] == sel_mod)
-        pieno_default = v_mod["co2pkm_pieno"] if v_mod["co2pkm_pieno"] is not None else 0.24
+        pieno_default = v_mod["co2/km pieno"] if v_mod["co2/km pieno"] is not None else 0.24
 
         ec1, ec2, ec3, ec4 = st.columns([2, 1, 1, 1])
         with ec1:
             edit_modello = st.text_input("Nome modello", value=v_mod["modello"], key="edit_modello")
         with ec2:
-            edit_vuoto = st.number_input("CO2/km vuoto", min_value=0.01, value=v_mod["co2pkm_vuoto"], step=0.01, format="%.2f", help="Emissioni CO₂ al km a furgone vuoto (kg/km)", key="edit_vuoto")
+            edit_vuoto = st.number_input("CO2/km vuoto", min_value=0.01, value=v_mod["co2/km vuoto"], step=0.01, format="%.2f", help="Emissioni CO₂ al km a furgone vuoto (kg/km)", key="edit_vuoto")
         with ec3:
             edit_pieno = st.number_input("CO2/km pieno (opz.)", min_value=0.01, value=pieno_default, step=0.01, format="%.2f", help="Emissioni CO₂ al km a pieno carico — usato per calibrare la curva logaritmica (kg/km)", key="edit_pieno")
         with ec4:
-            edit_cmax = st.number_input("C_max (kg)", min_value=100, value=v_mod["c_max"], step=100, help="Portata massima del veicolo in kg — corrisponde a f(C_max) nella curva logaritmica", key="edit_cmax")
+            edit_cmax = st.number_input("C max (kg)", min_value=100, value=v_mod["C max"], step=100, help="Portata massima del veicolo in kg — corrisponde a f(C max) nella curva logaritmica", key="edit_cmax")
 
         if st.button("Salva modifiche"):
             if not edit_modello.strip():
@@ -295,9 +295,9 @@ def sezione_veicoli():
                     idx = next(i for i, v in enumerate(st.session_state.veicoli) if v["modello"] == sel_mod)
                     st.session_state.veicoli[idx] = {
                         "modello": edit_modello.strip(),
-                        "co2pkm_vuoto": edit_vuoto,
-                        "co2pkm_pieno": pieno,
-                        "c_max": edit_cmax,
+                        "co2/km vuoto": edit_vuoto,
+                        "co2/km pieno": pieno,
+                        "C max": edit_cmax,
                     }
                     save_json("veicoli.json", st.session_state.veicoli)
                     st.session_state.ultimo_veicolo_modifica = edit_modello.strip()
@@ -520,12 +520,12 @@ def pagina_calcolatore():
         modello_sel = st.selectbox("Seleziona veicolo", modelli)
         veicolo = next(v for v in st.session_state.veicoli if v["modello"] == modello_sel)
 
-        pieno_str = f"{veicolo['co2pkm_pieno']} kg/km" if veicolo["co2pkm_pieno"] else "— (fallback lineare)"
+        pieno_str = f"{veicolo['co2/km pieno']} kg/km" if veicolo["co2/km pieno"] else "— (fallback lineare)"
         st.caption(
-            f"CO2/km vuoto: **{veicolo['co2pkm_vuoto']}** · "
+            f"CO2/km vuoto: **{veicolo['co2/km vuoto']}** · "
             f"CO2/km pieno: **{pieno_str}** · "
-            f"C_max: **{veicolo['c_max']} kg** · "
-            f"Curva: **{'logaritmica' if veicolo['co2pkm_pieno'] else 'lineare (fallback)'}**"
+            f"C max: **{veicolo['C max']} kg** · "
+            f"Curva: **{'logaritmica' if veicolo['co2/km pieno'] else 'lineare (fallback)'}**"
         )
 
         st.divider()
@@ -543,26 +543,26 @@ def pagina_calcolatore():
         c1, c2 = st.columns(2)
         
         with c1:
-            n_itinerario = st.number_input("N_itinerario", min_value=1, value=3, step=1,
+            n_itinerario = st.number_input("N itinerario", min_value=1, value=3, step=1,
                                            help="Numero di clienti nel giro")
             carico = st.number_input(
-                "C — Carico totale furgone (kg)",
+                "C - Carico totale furgone (kg)",
                 min_value=q_kg,
-                max_value=float(veicolo["c_max"]),
-                value=min(max(q_kg * 3, 300.0), float(veicolo["c_max"])),
+                max_value=float(veicolo["C max"]),
+                value=min(max(q_kg * 3, 300.0), float(veicolo["C max"])),
                 step=1.0,
-                help=f"Peso totale nel furgone — max {veicolo['c_max']} kg per questo modello"
+                help=f"Peso totale nel furgone - max {veicolo['C max']} kg per questo modello"
             )
         with c2:
             d_baricentro_impianto = st.number_input(
-                "D_baricentro_impianto (km)",
+                "D1 - baricentro → impianto (km)",
                 min_value=1.0,
                 value=50.0,
                 step=1.0,
                 help="Distanza dal baricentro dei clienti all'impianto di riciclo",
             )
             d_itinerario = st.number_input(
-                "D_itinerario (km)",
+                "D2 - itinerario (km)",
                 min_value=d_baricentro_impianto,
                 value=max(100.0, d_baricentro_impianto),
                 step=1.0,
@@ -593,7 +593,7 @@ def pagina_calcolatore():
         st.markdown(badge_saldo(r["gha_netti"]), unsafe_allow_html=True)
         st.markdown("<br>", unsafe_allow_html=True)
 
-        if veicolo["co2pkm_pieno"] is None:
+        if veicolo["co2/km pieno"] is None:
             st.warning("CO2/km pieno non disponibile — usato modello lineare (fallback).")
         else:
             st.success("Curva logaritmica applicata.")
@@ -678,15 +678,15 @@ def pagina_calcolatore():
         )
         st.plotly_chart(fig, width='stretch')
 
-        if veicolo["co2pkm_pieno"] is not None:
+        if veicolo["co2/km pieno"] is not None:
             import numpy as np
-            b_curve = (veicolo["co2pkm_pieno"] - veicolo["co2pkm_vuoto"]) / math.log(1 + veicolo["c_max"])
-            xs = np.linspace(0, veicolo["c_max"], 300)
-            ys = veicolo["co2pkm_vuoto"] + b_curve * np.log(1 + xs)
+            b_curve = (veicolo["co2/km pieno"] - veicolo["co2/km vuoto"]) / math.log(1 + veicolo["C max"])
+            xs = np.linspace(0, veicolo["C max"], 300)
+            ys = veicolo["co2/km vuoto"] + b_curve * np.log(1 + xs)
 
-            y_vuoto  = veicolo["co2pkm_vuoto"]
-            y_pieno  = veicolo["co2pkm_pieno"]
-            y_giro   = r["co2pkm_carico"]
+            y_vuoto  = veicolo["co2/km vuoto"]
+            y_pieno  = veicolo["co2/km pieno"]
+            y_giro   = r["co2/km carico"]
             x_giro   = carico
 
             fig_curve = go.Figure()
@@ -699,7 +699,7 @@ def pagina_calcolatore():
             ))
 
             fig_curve.add_trace(go.Scatter(
-                x=[0, veicolo["c_max"]],
+                x=[0, veicolo["C max"]],
                 y=[y_vuoto, y_pieno],
                 mode="markers+text",
                 marker=dict(color="white", size=8),
@@ -765,15 +765,15 @@ def pagina_calcolatore():
         with st.expander("Dettaglio calcolo passo per passo"):
             t_verg_val = f["t_verg"] if f["t_verg"] is not None else 0.0
 
-            if veicolo["co2pkm_pieno"] is not None:
-                b = (veicolo["co2pkm_pieno"] - veicolo["co2pkm_vuoto"]) / math.log(1 + veicolo["c_max"])
+            if veicolo["co2/km pieno"] is not None:
+                b = (veicolo["co2/km pieno"] - veicolo["co2/km vuoto"]) / math.log(1 + veicolo["C max"])
                 curva_str = (
-                    f"b = ({veicolo['co2pkm_pieno']} - {veicolo['co2pkm_vuoto']}) "
-                    f"/ ln(1 + {veicolo['c_max']}) = **{b:.3f}**\n\n"
-                    f"CO2perKm(C) = {veicolo['co2pkm_vuoto']} + {b:.3f} x ln(1 + C)"
+                    f"b = ({veicolo['co2/km pieno']} - {veicolo['co2/km vuoto']}) "
+                    f"/ ln(1 + {veicolo['C max']}) = **{b:.3f}**\n\n"
+                    f"CO2perKm(C) = {veicolo['co2/km vuoto']} + {b:.3f} x ln(1 + C)"
                 )
             else:
-                curva_str = f"CO2perKm(C) = {veicolo['co2pkm_vuoto']} + C x 0.00008  *(lineare — fallback)*"
+                curva_str = f"CO2perKm(C) = {veicolo['co2/km vuoto']} + C x 0.00008  *(lineare — fallback)*"
 
             st.markdown(f"""
 **Curva emissioni ({r['modello_curva']}):**
@@ -783,11 +783,11 @@ def pagina_calcolatore():
 |-----------|--------|
 | Q (kg conferiti) | {q_kg} kg |
 | Conf = Q / C | {r['conf']:.3f} |
-| D_itinerario | {d_itinerario} km |
-| D_baricentro_impianto | {d_baricentro_impianto} km |
-| N_itinerario | {n_itinerario} |
-| CO2perKm(0) vuoto | {r['co2pkm_vuoto']:.3f} kg/km |
-| CO2perKm(C) carico | {r['co2pkm_carico']:.3f} kg/km |
+| D2 - itinerario | {d_itinerario} km |
+| D1 - baricentro → impianto | {d_baricentro_impianto} km |
+| N itinerario | {n_itinerario} |
+| CO2perKm(0) vuoto | {r['co2/km vuoto']:.3f} kg/km |
+| CO2perKm(C) carico | {r['co2/km carico']:.3f} kg/km |
 """)
 
             if r["no_recycling"]:
@@ -796,9 +796,9 @@ def pagina_calcolatore():
 
 **S** = {q_kg} x ({f['t_tratt']} + {f['t_smalt']}) = **{r['s']:+.3f} kg CO2**
 
-**T1** = ({d_itinerario} x {r['co2pkm_vuoto']:.3f}) / {n_itinerario} = **{r['t1']:+.3f} kg CO2**
+**T1** = ({d_itinerario} x {r['co2/km vuoto']:.3f}) / {n_itinerario} = **{r['t1']:+.3f} kg CO2**
 
-**T2** = ({r['co2pkm_carico']:.3f} - {r['co2pkm_vuoto']:.3f}) x {d_baricentro_impianto} x {r['conf']:.3f} = **{r['t2']:+.3f} kg CO2**
+**T2** = ({r['co2/km carico']:.3f} - {r['co2/km vuoto']:.3f}) x {d_baricentro_impianto} x {r['conf']:.3f} = **{r['t2']:+.3f} kg CO2**
 
 **CO2 netta** = S + T1 + T2 = **{r['co2_netta']:+.3f} kg CO2**
 
@@ -812,9 +812,9 @@ def pagina_calcolatore():
 
 **S2** = {q_kg} x ({f['t_tratt']} + {f['t_ric']}) = **{r['s2']:+.3f} kg CO2**
 
-**T1** = ({d_itinerario} x {r['co2pkm_vuoto']:.3f}) / {n_itinerario} = **{r['t1']:+.3f} kg CO2**
+**T1** = ({d_itinerario} x {r['co2/km vuoto']:.3f}) / {n_itinerario} = **{r['t1']:+.3f} kg CO2**
 
-**T2** = ({r['co2pkm_carico']:.3f} - {r['co2pkm_vuoto']:.3f}) x {d_baricentro_impianto} x {r['conf']:.3f} = **{r['t2']:+.3f} kg CO2**
+**T2** = ({r['co2/km carico']:.3f} - {r['co2/km vuoto']:.3f}) x {d_baricentro_impianto} x {r['conf']:.3f} = **{r['t2']:+.3f} kg CO2**
 
 **CO2 netta** = S1 + S2 + T1 + T2 = **{r['co2_netta']:+.3f} kg CO2**
 
@@ -860,10 +860,10 @@ def pagina_tabelle():
         st.caption("Veicoli inseriti nella sessione corrente.")
         if st.session_state.get("veicoli"):
             df_v = pd.DataFrame(st.session_state.veicoli)
-            df_v["co2pkm_pieno"] = df_v["co2pkm_pieno"].apply(
+            df_v["co2/km pieno"] = df_v["co2/km pieno"].apply(
                 lambda x: x if x is not None else "— (da rilevare)"
             )
-            df_v.columns = ["Modello", "CO2/km vuoto", "CO2/km pieno", "C_max (kg)"]
+            df_v.columns = ["Modello", "CO2/km vuoto", "CO2/km pieno", "C max (kg)"]
             st.dataframe(df_v, hide_index=True, width='stretch')
         else:
             st.info("Nessun veicolo inserito.")
