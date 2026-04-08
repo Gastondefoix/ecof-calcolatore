@@ -91,7 +91,7 @@ def co2_per_km_log(carico, co2_vuoto, co2_pieno, c_max):
     Logarithmic model: CO2/km as a function of load.
     Calibrated on two points: f(0) = co2_vuoto, f(c_max) = co2_pieno.
     b = (co2_pieno - co2_vuoto) / ln(1 + c_max)
-    CO2perKm(C) = co2_vuoto + b * ln(1 + C)
+    CO2/Km(C) = co2_vuoto + b * ln(1 + C)
     """
     b = (co2_pieno - co2_vuoto) / math.log(1 + c_max)
     return co2_vuoto + b * math.log(1 + carico)
@@ -121,8 +121,8 @@ def calcola_movimento(materiale, q_kg, d_itinerario_km, d_baricentro_impianto_km
     normal:
       S1 = -Q * (T_smalt + T_verg)
       S2 =  Q * (T_tratt + T_ric)
-    T1 = (D_itinerario * CO2perKm(0)) / N_itinerario
-    T2 = (CO2perKm(C) - CO2perKm(0)) * D_baricentro_impianto * Conf
+    T1 = (D_itinerario * CO2/Km(0)) / N_itinerario
+    T2 = (CO2/Km(C) - CO2/Km(0)) * D_baricentro_impianto * Conf
 
     gha_netti = -gha_impronta + bc_liberata
     Convention: positive = biocapacity, negative = ecological footprint
@@ -770,10 +770,10 @@ def pagina_calcolatore():
                 curva_str = (
                     f"b = ({veicolo['co2/km pieno']} - {veicolo['co2/km vuoto']}) "
                     f"/ ln(1 + {veicolo['C max']}) = **{b:.3f}**\n\n"
-                    f"CO2perKm(C) = {veicolo['co2/km vuoto']} + {b:.3f} x ln(1 + C)"
+                    f"CO2/Km(C) = {veicolo['co2/km vuoto']} + {b:.3f} x ln(1 + C)"
                 )
             else:
-                curva_str = f"CO2perKm(C) = {veicolo['co2/km vuoto']} + C x 0.00008  *(lineare — fallback)*"
+                curva_str = f"CO2/Km(C) = {veicolo['co2/km vuoto']} + C x 0.00008  *(lineare — fallback)*"
 
             st.markdown(f"""
 **Curva emissioni ({r['modello_curva']}):**
@@ -786,8 +786,8 @@ def pagina_calcolatore():
 | D2 - itinerario | {d_itinerario} km |
 | D1 - baricentro → impianto | {d_baricentro_impianto} km |
 | N itinerario | {n_itinerario} |
-| CO2perKm(0) vuoto | {r['co2/km vuoto']:.3f} kg/km |
-| CO2perKm(C) carico | {r['co2/km carico']:.3f} kg/km |
+| CO2/Km(0) vuoto | {r['co2/km vuoto']:.3f} kg/km |
+| CO2/Km(C) carico | {r['co2/km carico']:.3f} kg/km |
 """)
 
             if r["no_recycling"]:
@@ -888,7 +888,7 @@ def main():
             "materiali.json", {k: dict(v) for k, v in FATTORI.items()}
         )
 
-    st.markdown("# Calcolatore Saldo Ambientale")
+    st.markdown("# Soluslab 💠")
     st.caption("Soluslab — strumento di calcolo CO2 e biocapacita per movimento rifiuti.")
     st.divider()
 
